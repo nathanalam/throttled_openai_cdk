@@ -1,0 +1,3 @@
+openai
+tiktoken
+urllib3<2
