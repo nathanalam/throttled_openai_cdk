@@ -12,7 +12,10 @@ def handler(event, context):
     if "body" not in event or event["body"] is None:
         return {
             "statusCode": 400,
-            "body": "A request body must be provided"
+            "body": "A request body must be provided",
+            "headers": {
+                "Access-Control-Allow-Origin": "*"
+            }
         }
     messages = json.loads(event["body"])
     print("Received message history:")
@@ -21,7 +24,10 @@ def handler(event, context):
     if type(messages) != list:
         return {
             "statusCode": 400,
-            "body": "Body must be a list of messages of format [{\"role\": \"system\" | \"user\" | \"assistant\", \"content\": \"<message_text>\"}]"
+            "body": "Body must be a list of messages of format [{\"role\": \"system\" | \"user\" | \"assistant\", \"content\": \"<message_text>\"}]",
+            "headers": {
+                "Access-Control-Allow-Origin": "*"
+            }
         }
 
     token_table = os.environ['TOKEN_TABLE_NAME']
@@ -45,7 +51,10 @@ def handler(event, context):
     if current_usage > token_threshold:
         return {
             "statusCode": 400,
-            "body": f"Daily token usage threshold reached. Current usage: {current_usage} > {token_threshold}"
+            "body": f"Daily token usage threshold reached. Current usage: {current_usage} > {token_threshold}",
+            "headers": {
+                "Access-Control-Allow-Origin": "*"
+            }
         }
     
     print(f"Projected usage after execution: {current_usage}")
@@ -76,4 +85,7 @@ def handler(event, context):
     return {
         "statusCode": 200,
         "body": json.dumps(response),
+        "headers": {
+            "Access-Control-Allow-Origin": "*"
+        }
     }
