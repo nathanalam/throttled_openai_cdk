@@ -55,7 +55,8 @@ export class ThrottledMlApiStack extends cdk.Stack {
         throttlingBurstLimit: 2,
       },
       defaultCorsPreflightOptions: {
-        allowOrigins: Cors.ALL_ORIGINS
+        allowOrigins: Cors.ALL_ORIGINS,
+        allowHeaders: ['*']
       }
     });
 

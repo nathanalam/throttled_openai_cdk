@@ -14,7 +14,8 @@ def handler(event, context):
             "statusCode": 400,
             "body": "A request body must be provided",
             "headers": {
-                "Access-Control-Allow-Origin": "*"
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "*"
             }
         }
     messages = json.loads(event["body"])
@@ -26,7 +27,8 @@ def handler(event, context):
             "statusCode": 400,
             "body": "Body must be a list of messages of format [{\"role\": \"system\" | \"user\" | \"assistant\", \"content\": \"<message_text>\"}]",
             "headers": {
-                "Access-Control-Allow-Origin": "*"
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "*"
             }
         }
 
@@ -53,7 +55,8 @@ def handler(event, context):
             "statusCode": 400,
             "body": f"Daily token usage threshold reached. Current usage: {current_usage} > {token_threshold}",
             "headers": {
-                "Access-Control-Allow-Origin": "*"
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "*"
             }
         }
     
@@ -86,6 +89,7 @@ def handler(event, context):
         "statusCode": 200,
         "body": json.dumps(response),
         "headers": {
-            "Access-Control-Allow-Origin": "*"
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "*"
         }
     }
