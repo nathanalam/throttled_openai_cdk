@@ -8,59 +8,65 @@ import path = require("path");
 
 const OPEN_API_KEY = process.env.OPEN_API_KEY;
 const DAILY_TOKEN_THRESHOLD = "1000000";
-const MODEL = "gpt-3.5-turbo";
+const MODELS = ["gpt-3.5-turbo", "gpt-4"];
 
 export class ThrottledMlApiStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    const tokenTable = new Table(this, "OpenAITokenConsumption", {
-      partitionKey: { name: "date", type: AttributeType.STRING },
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
-    });
+    MODELS.forEach((model) => {
+      const tokenTable = new Table(this, `OpenAITokenConsumption-${model}`, {
+        partitionKey: { name: "date", type: AttributeType.STRING },
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
+      });
 
-    const handler = new Function(this, "OpenAIHandler", {
-      runtime: Runtime.PYTHON_3_10,
-      code: Code.fromAsset(path.join(__dirname, "../resources/lambda_src/throttled_open_ai"), {
-        bundling: {
-          image: Runtime.PYTHON_3_10.bundlingImage,
-          command: [
-            "bash",
-            "-c",
-            [
-              "pip install -r requirements.txt -t /asset-output",
-              "echo 'COMPLETED INSTALL'",
-              "cp -ru . /asset-output"
-            ].join("&& ")
-          ],
+      const handler = new Function(this, `OpenAIHandler-${model}`, {
+        runtime: Runtime.PYTHON_3_10,
+        code: Code.fromAsset(
+          path.join(__dirname, "../resources/lambda_src/throttled_open_ai"),
+          {
+            bundling: {
+              image: Runtime.PYTHON_3_10.bundlingImage,
+              command: [
+                "bash",
+                "-c",
+                [
+                  "pip install -r requirements.txt -t /asset-output",
+                  "echo 'COMPLETED INSTALL'",
+                  "cp -ru . /asset-output",
+                ].join("&& "),
+              ],
+            },
+          }
+        ),
+        handler: "index.handler",
+        environment: {
+          TOKEN_TABLE_NAME: tokenTable.tableName,
+          OPEN_API_KEY: OPEN_API_KEY || "",
+          DAILY_TOKEN_THRESHOLD,
+          MODEL: model,
         },
-      }),
-      handler: "index.handler",
-      environment: {
-        TOKEN_TABLE_NAME: tokenTable.tableName,
-        OPEN_API_KEY: OPEN_API_KEY || '',
-        DAILY_TOKEN_THRESHOLD,
-        MODEL
-      },
-      timeout: Duration.minutes(10),
-      memorySize: 1024,
+        timeout: Duration.minutes(10),
+        memorySize: 1024,
+      });
+
+      tokenTable.grantReadWriteData(handler);
+
+      const api = new RestApi(this, `ThrottledOpenAI-${model}`, {
+        restApiName: "ThrottledOpenAI",
+        deployOptions: {
+          throttlingRateLimit: 1,
+          throttlingBurstLimit: 2,
+        },
+        defaultCorsPreflightOptions: {
+          allowOrigins: Cors.ALL_ORIGINS,
+          allowHeaders: ["*"],
+          allowMethods: Cors.ALL_METHODS
+        },
+      });
+
+      const integration = new LambdaIntegration(handler);
+      api.root.addMethod("POST", integration);
     });
-
-    tokenTable.grantReadWriteData(handler);
-
-    const api = new RestApi(this, "ThrottledOpenAI", {
-      restApiName: "ThrottledOpenAI",
-      deployOptions: {
-        throttlingRateLimit: 1,
-        throttlingBurstLimit: 2,
-      },
-      defaultCorsPreflightOptions: {
-        allowOrigins: Cors.ALL_ORIGINS,
-        allowHeaders: ['*']
-      }
-    });
-
-    const integration = new LambdaIntegration(handler);
-    api.root.addMethod("POST", integration);
   }
 }
